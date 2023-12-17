@@ -1,118 +1,123 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
   View,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
+import Card from './src/Components/Card';
+import movies from './assets/data/movies';
+import Animated ,{ 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  useDerivedValue,
+  interpolate,
+  runOnJS
+} from 'react-native-reanimated'
+import { Gesture, GestureDetector, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const SWIPE_VELOCITY = 800;
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [nextIndex, setNextIndex] = useState(currentIndex + 1);
+  const currentMovie = movies[currentIndex];
+  const nextMovie = movies[nextIndex];
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+  const {width: screenWidth} = useWindowDimensions();
+  const prevPositionX = useSharedValue(0);
+  const offsetX = useSharedValue(0);
+  const hiddenTranslateX = 2 * screenWidth;
+  const rotate = useDerivedValue( () => interpolate(
+      offsetX.value,
+      [0, hiddenTranslateX],
+      [0, 60],
+  ) + 'deg' );
+
+
+  const cardAnimated = useAnimatedStyle(() => {
+    return {
+      transform: [{
+          translateX: offsetX.value,
+      },
+      {
+          rotate: rotate.value,
+      },
+      ],
+    }});
+
+  const nextCardAnimated = useAnimatedStyle(() => ({
+    transform: [
+     { scale: interpolate(offsetX.value, [-hiddenTranslateX, 0, hiddenTranslateX], [1, 0.9, 1]) }
+    ],
+    opacity: interpolate(offsetX.value, [-hiddenTranslateX, 0, hiddenTranslateX], [1, 0.8, 1])
+  }))
+  
+  const dragGesture = Gesture.Pan()
+      .onBegin(() => {
+          prevPositionX.value = offsetX.value;
+      })
+      .onUpdate((event) => {
+          const newPosition = event.translationX + prevPositionX.value;
+          offsetX.value = newPosition
+      })
+      .onEnd((event) => {
+          if (Math.abs(event.velocityX) < SWIPE_VELOCITY){
+            offsetX.value = withSpring(0);
+            return;
+          };
+          offsetX.value = withSpring(hiddenTranslateX * Math.sign(event.velocityX));
+          runOnJS(setCurrentIndex)(currentIndex+1);
+      })
+    
+  useEffect(() => {
+    offsetX.value = 0;
+    setNextIndex(currentIndex + 1);
+  }, [currentIndex]);
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <GestureHandlerRootView style= {styles.pageContainer}>
+      {nextMovie && (
+        <View style= {styles.nextCardContainer}>
+          <Animated.View  style = {[nextCardAnimated, styles.animatedCard]} >
+            <Card movie = {nextMovie}></Card>
+          </Animated.View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      )}
+      
+      {currentMovie && (
+        <Animated.View style = {[cardAnimated, styles.animatedCard]}> 
+          <GestureDetector gesture={dragGesture}>
+            <Card movie = {currentMovie}></Card>
+          </GestureDetector>
+        </Animated.View >
+      )}
+    </GestureHandlerRootView>
+
   );
 }
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+const styles =  StyleSheet.create({
+  pageContainer: { 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    flex: 1 
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  animatedCard: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  nextCardContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
   },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+  
+})
 
 export default App;
