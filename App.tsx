@@ -6,7 +6,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Card from './src/Components/Card';
-import movies from './assets/data/movies';
+import movies from './src/data/MoviesFetch';
 import Animated ,{ 
   useSharedValue, 
   useAnimatedStyle, 
@@ -16,10 +16,12 @@ import Animated ,{
   runOnJS
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector, GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import Movies from "./src/data/MoviesFetch";
 
 const SWIPE_VELOCITY = 800;
 
 function App(): React.JSX.Element {
+  const { movies, loadingMovies} = Movies();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(currentIndex + 1);
   const currentMovie = movies[currentIndex];

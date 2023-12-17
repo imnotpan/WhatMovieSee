@@ -8,19 +8,16 @@ import {
 
 
 const Card = (props: {
-    movie: { name: any; image: any; description: any; }; 
+    movie: { title: any; poster_path: any; overview: any; }; 
 }) => {
-    const {name, image, description} = props.movie
-
-
-
-
+    const {title, poster_path, overview} = props.movie
+    
     return (
         <View style = {styles.card}>
-            <ImageBackground source = {{uri: image}} style={styles.image}>
+            <ImageBackground source = {{uri: poster_path}} style={styles.image}>
                 <View style = {styles.cardInner}> 
-                    <Text style = {styles.name}> {name} </Text>
-                    <Text style = {styles.description}> {description} </Text>
+                    <Text style = {styles.title}> {title} </Text>
+                    <Text style = {styles.overview}> {overview} </Text>
                 </View>
             </ImageBackground>
         </View>
@@ -35,12 +32,12 @@ const styles =  StyleSheet.create({
       overflow: 'hidden',
       justifyContent: 'flex-end',
     },
-    name: {
+    title: {
       fontSize: 25,
       color: 'white',
       fontWeight: 'bold',
     },
-    description: {
+    overview: {
       fontSize: 10, 
       color :'white',
       lineHeight: 24,
